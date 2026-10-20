@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -1658,6 +1660,42 @@ TEST(GainMapTest, ComputeGainMapUnsupportedDepth) {
       << avifResultToString(result) << " " << diag.error;
   // The planes are freed on error, per the cleanup contract.
   EXPECT_EQ(gain_map->image->yuvPlanes[0], nullptr);
+}
+
+// width * height is rejected before any pixel buffer is allocated.
+TEST(GainMapTest, ComputeGainMapPixelCountDoesNotFit) {
+  avifRGBImage base_rgb;
+  memset(&base_rgb, 0, sizeof(base_rgb));
+  base_rgb.width = UINT32_MAX;
+  base_rgb.height = UINT32_MAX;
+  base_rgb.depth = 8;
+  base_rgb.format = AVIF_RGB_FORMAT_RGB;
+
+  avifRGBImage alt_rgb;
+  memset(&alt_rgb, 0, sizeof(alt_rgb));
+  alt_rgb.width = base_rgb.width;
+  alt_rgb.height = base_rgb.height;
+  alt_rgb.depth = base_rgb.depth;
+  alt_rgb.format = base_rgb.format;
+
+  GainMapPtr gain_map(avifGainMapCreate());
+  ASSERT_NE(gain_map, nullptr);
+  gain_map->image = avifImageCreate(1, 1, 8, AVIF_PIXEL_FORMAT_YUV444);
+  ASSERT_NE(gain_map->image, nullptr);
+
+  avifDiagnostics diag;
+  const avifResult result = avifRGBImageComputeGainMap(
+      &base_rgb, AVIF_COLOR_PRIMARIES_SRGB, AVIF_TRANSFER_CHARACTERISTICS_SRGB,
+      &alt_rgb, AVIF_COLOR_PRIMARIES_SRGB, AVIF_TRANSFER_CHARACTERISTICS_SRGB,
+      gain_map.get(), &diag);
+
+  EXPECT_EQ(result, AVIF_RESULT_INVALID_ARGUMENT)
+      << avifResultToString(result) << " " << diag.error;
+  EXPECT_EQ(base_rgb.pixels, nullptr);
+  EXPECT_EQ(alt_rgb.pixels, nullptr);
+  EXPECT_EQ(gain_map->image->yuvPlanes[0], nullptr);
+  EXPECT_EQ(gain_map->image->yuvPlanes[1], nullptr);
+  EXPECT_EQ(gain_map->image->yuvPlanes[2], nullptr);
 }
 
 TEST(FindMinMaxWithoutOutliers, AllSame) {

@@ -56,6 +56,8 @@ The changes are relative to the previous release, unless the baseline is specifi
 * Keep the premultiplied alpha flag of a MinimizedImageBox. The one bit
   alpha_is_premultiplied value was stored in a field compared against the alpha
   item ID, so such an image used to decode as straight alpha.
+* avifRGBImageComputeGainMap() returns AVIF_RESULT_INVALID_ARGUMENT when
+  width * height does not fit in size_t or in a buffer of floats.
 
 ## [1.4.2] - 2026-05-26
 
