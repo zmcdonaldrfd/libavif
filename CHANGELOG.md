@@ -56,6 +56,9 @@ The changes are relative to the previous release, unless the baseline is specifi
 * Keep the premultiplied alpha flag of a MinimizedImageBox. The one bit
   alpha_is_premultiplied value was stored in a field compared against the alpha
   item ID, so such an image used to decode as straight alpha.
+* Reject an SVT-AV1 plane whose row stride or byte count does not fit in
+  uint32_t, instead of wrapping the size passed to avifCalloc() or
+  n_filled_len.
 
 ## [1.4.2] - 2026-05-26
 

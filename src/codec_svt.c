@@ -274,20 +274,28 @@ static avifResult svtCodecEncodeImage(avifCodec * codec,
     if (alpha) {
         input_picture_buffer->y_stride = image->alphaRowBytes / bytesPerPixel;
         input_picture_buffer->luma = image->alphaPlane;
-        const size_t alphaSize = (size_t)image->alphaRowBytes * image->height;
-        if (alphaSize > UINT32_MAX) {
+        // alphaRowBytes * height is stored in n_filled_len (uint32_t).
+        const uint64_t alphaSize64 = (uint64_t)image->alphaRowBytes * image->height;
+        if (alphaSize64 > UINT32_MAX) {
             goto cleanup;
         }
+        const size_t alphaSize = (size_t)alphaSize64;
         input_buffer->n_filled_len = (uint32_t)alphaSize;
 
 #if SVT_AV1_CHECK_VERSION(1, 8, 0)
         // Simulate 4:2:0 UV planes. SVT-AV1 does not support 4:0:0 samples.
         const uint32_t uvWidth = (image->width + y_shift) >> y_shift;
-        const uint32_t uvRowBytes = uvWidth * bytesPerPixel;
-        const size_t uvSize = (size_t)uvRowBytes * uvHeight;
-        if (uvSize > UINT32_MAX / 2) {
+        // uvRowBytes is uint32_t. bytesPerPixel is 1 or 2.
+        if (uvWidth > UINT32_MAX / bytesPerPixel) {
             goto cleanup;
         }
+        const uint32_t uvRowBytes = uvWidth * bytesPerPixel;
+        // uvRowBytes * uvHeight is allocated and added to n_filled_len (uint32_t) twice.
+        const uint64_t uvSize64 = (uint64_t)uvRowBytes * uvHeight;
+        if (uvSize64 > UINT32_MAX / 2) {
+            goto cleanup;
+        }
+        const size_t uvSize = (size_t)uvSize64;
         if (uvSize * 2 > UINT32_MAX - input_buffer->n_filled_len) {
             goto cleanup;
         }
@@ -309,22 +317,28 @@ static avifResult svtCodecEncodeImage(avifCodec * codec,
     } else {
         input_picture_buffer->y_stride = image->yuvRowBytes[0] / bytesPerPixel;
         input_picture_buffer->luma = image->yuvPlanes[0];
-        const size_t ySize = (size_t)image->yuvRowBytes[0] * image->height;
-        if (ySize > UINT32_MAX) {
+        // yuvRowBytes[0] * height is stored in n_filled_len (uint32_t).
+        const uint64_t ySize64 = (uint64_t)image->yuvRowBytes[0] * image->height;
+        if (ySize64 > UINT32_MAX) {
             goto cleanup;
         }
+        const size_t ySize = (size_t)ySize64;
         input_buffer->n_filled_len = (uint32_t)ySize;
         input_picture_buffer->cb = image->yuvPlanes[1];
-        const size_t uSize = (size_t)image->yuvRowBytes[1] * uvHeight;
-        if (uSize > UINT32_MAX - input_buffer->n_filled_len) {
+        // yuvRowBytes[1] * uvHeight is added to n_filled_len (uint32_t).
+        const uint64_t uSize64 = (uint64_t)image->yuvRowBytes[1] * uvHeight;
+        if (uSize64 > UINT32_MAX - input_buffer->n_filled_len) {
             goto cleanup;
         }
+        const size_t uSize = (size_t)uSize64;
         input_buffer->n_filled_len += (uint32_t)uSize;
         input_picture_buffer->cr = image->yuvPlanes[2];
-        const size_t vSize = (size_t)image->yuvRowBytes[2] * uvHeight;
-        if (vSize > UINT32_MAX - input_buffer->n_filled_len) {
+        // yuvRowBytes[2] * uvHeight is added to n_filled_len (uint32_t).
+        const uint64_t vSize64 = (uint64_t)image->yuvRowBytes[2] * uvHeight;
+        if (vSize64 > UINT32_MAX - input_buffer->n_filled_len) {
             goto cleanup;
         }
+        const size_t vSize = (size_t)vSize64;
         input_buffer->n_filled_len += (uint32_t)vSize;
         input_picture_buffer->cb_stride = image->yuvRowBytes[1] / bytesPerPixel;
         input_picture_buffer->cr_stride = image->yuvRowBytes[2] / bytesPerPixel;
