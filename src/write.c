@@ -3839,6 +3839,8 @@ avifResult avifEncoderFinish(avifEncoder * encoder, avifRWData * output)
         uint64_t framesDurationInTimescales = 0;
         for (uint32_t frameIndex = 0; frameIndex < encoder->data->frames.count; ++frameIndex) {
             const avifEncoderFrame * frame = &encoder->data->frames.frame[frameIndex];
+            // The sum is uint64_t and is written as the mvhd duration.
+            AVIF_CHECKERR(frame->durationInTimescales <= UINT64_MAX - framesDurationInTimescales, AVIF_RESULT_INVALID_ARGUMENT);
             framesDurationInTimescales += frame->durationInTimescales;
         }
         uint64_t durationInTimescales;
@@ -4039,7 +4041,9 @@ avifResult avifEncoderFinish(avifEncoder * encoder, avifRWData * output)
                         continue;
                     }
                 }
-                AVIF_CHECKRES(avifRWStreamWriteU32(&s, sampleCount));                           // unsigned int(32) sample_count;
+                AVIF_CHECKRES(avifRWStreamWriteU32(&s, sampleCount)); // unsigned int(32) sample_count;
+                // sample_delta is unsigned int(32).
+                AVIF_CHECKERR(frame->durationInTimescales <= UINT32_MAX, AVIF_RESULT_INVALID_ARGUMENT);
                 AVIF_CHECKRES(avifRWStreamWriteU32(&s, (uint32_t)frame->durationInTimescales)); // unsigned int(32) sample_delta;
                 sampleCount = 0;
                 ++sttsEntryCount;

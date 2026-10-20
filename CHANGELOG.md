@@ -56,6 +56,9 @@ The changes are relative to the previous release, unless the baseline is specifi
 * Keep the premultiplied alpha flag of a MinimizedImageBox. The one bit
   alpha_is_premultiplied value was stored in a field compared against the alpha
   item ID, so such an image used to decode as straight alpha.
+* avifEncoderFinish() returns AVIF_RESULT_INVALID_ARGUMENT when a sequence
+  frame duration does not fit in the remaining uint64_t duration sum, or when
+  an stts sample_delta does not fit in uint32_t.
 
 ## [1.4.2] - 2026-05-26
 
